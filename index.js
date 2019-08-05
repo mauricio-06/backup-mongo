@@ -16,25 +16,30 @@ MongoClient.connect(url, {useNewUrlParser: true}, (err, db) => {
     let ano = d.getFullYear();
     let formato = `${dia}-${mes}-${ano}`;
     let carpeta = `./backup_${formato}`;
-    
+    let count = 0;
+    let blackList = ['system.profile', 'crud', 'backlogFCS'];
+    let total = collInfos.length - blackList.length;
+
     if (!fs.existsSync(carpeta)){
         fs.mkdirSync(carpeta);
     }
 
     collInfos.forEach((item, index) => {
       let file = `${carpeta}/${item.name}_${formato}.json`;
-      setTimeout(() => {
-        if(item.name != 'system.profile'){
-          dbo.collection(item.name).find().toArray((err, result) => {
-            if (err) throw err;
-            jsonfile.writeFile(file, result).then(rs => {
-              console.log('Write Complete');
-            })
-            .catch(error => console.log('Error: ', error));
-          });
-        }
-      }, 1000);
+      if(blackList.includes(item.name) == false){
+        dbo.collection(item.name).find().toArray((err, result) => {
+          if (err) throw err;
+          jsonfile.writeFile(file, result).then(rs => {
+            console.log('Write Complete');
+            count++;
+            if(count == total){
+              //console.log('total: ' + count);
+              db.close();
+            }
+          })
+          .catch(error => console.log('Error: ', error));
+        });
+      }
     });
-    //db.close();
   });
 });
